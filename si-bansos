@@ -1,0 +1,1483 @@
+# ====================================================================
+# SI-BANSOS KABUPATEN BIREUEN - APACHE WEB HOSTING CONFIGURATION
+# Optimized for cPanel / Shared Hosting / LiteSpeed / Apache Web Server
+# ====================================================================
+
+# 1. Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Hide Directory Indexing
+    Options -Indexes
+</IfModule>
+
+# 2. Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 3. Gzip / Deflate Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+# 4. Leverage Browser Caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+
+<?php
+require_once __DIR__ . '/config.php';
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Admin | SI-BANSOS Kabupaten Bireuen</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="background:#f8fafc;">
+
+  <!-- Admin Top Bar -->
+  <div style="background:var(--neutral-900); color:white; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.1);">
+    <div class="container" style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="background:var(--primary-600); font-weight:800; padding:4px 10px; border-radius:6px; font-size:0.8rem;">ADMIN PORTAL</span>
+        <strong style="font-size:1rem;">Dinas Sosial Kabupaten Bireuen</strong>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <span style="font-size:0.875rem; color:#cbd5e1;">👤 Operator: Administrator Dinsos</span>
+        <a href="index.php" class="btn btn-outline btn-sm" style="color:white; border-color:rgba(255,255,255,0.3);">🌐 Lihat Portal Publik</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="margin-top:30px; margin-bottom:60px;">
+    
+    <!-- Header Title & Action Buttons -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+      <div>
+        <h2 style="font-size:1.75rem; font-weight:800; color:var(--neutral-900);">Dashboard Pengelolaan DTKS & Bansos</h2>
+        <p style="color:var(--neutral-600); font-size:0.9rem;">Kelola data penerima bantuan sosial, usulan warga, dan pengaduan masyarakat.</p>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-outline" onclick="exportToCSV()">📥 Export Data CSV</button>
+        <button class="btn btn-primary" onclick="openModal('modal-add')">➕ Tambah Data Penerima</button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-header">
+      <button class="tab-btn active" data-tab="tab-overview">📊 Ringkasan & Grafik</button>
+      <button class="tab-btn" data-tab="tab-penerima">📋 Data Penerima (DTKS)</button>
+      <button class="tab-btn" data-tab="tab-usulan">📝 Usulan Mandiri Warga</button>
+      <button class="tab-btn" data-tab="tab-pengaduan">🚨 Posko Pengaduan</button>
+    </div>
+
+    <!-- TAB 1: OVERVIEW & STATS -->
+    <div class="tab-pane active" id="tab-overview">
+      <div class="stats-grid" style="margin-top:0; margin-bottom:30px;">
+        <div class="stat-card">
+          <div class="stat-icon green">👥</div>
+          <div class="stat-info">
+            <h4>86.250</h4>
+            <p>Total Penerima KPM</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber">⏳</div>
+          <div class="stat-info">
+            <h4>1.240</h4>
+            <p>Verifikasi Pending</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">📦</div>
+          <div class="stat-info">
+            <h4>4 Program</h4>
+            <p>Bansos Aktif Salur</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">🚨</div>
+          <div class="stat-info">
+            <h4>12 Ticket</h4>
+            <p>Pengaduan Baru</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div style="display:grid; grid-template-columns: 1.3fr 0.7fr; gap:24px;">
+        <div style="background:white; padding:24px; border-radius:16px; border:1px solid #e2e8f0; box-shadow:var(--shadow-sm);">
+          <h4 style="margin-bottom:16px; font-weight:700;">Distribusi KPM Penerima Bansos per Kecamatan</h4>
+          <canvas id="chartKecamatan" height="170"></canvas>
+        </div>
+
+        <div style="background:white; padding:24px; border-radius:16px; border:1px solid #e2e8f0; box-shadow:var(--shadow-sm);">
+          <h4 style="margin-bottom:16px; font-weight:700;">Persentase per Program Bansos</h4>
+          <canvas id="chartProgram" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: DATA PENERIMA DTKS -->
+    <div class="tab-pane" id="tab-penerima">
+      <div style="background:white; padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0; display:flex; gap:16px; flex-wrap:wrap;">
+        <input type="text" id="admin-search-input" class="form-control" style="max-width:300px;" placeholder="Cari NIK / Nama / Gampong..." onkeyup="loadAdminPenerimaTable()">
+        <select id="admin-filter-kecamatan" class="form-control" style="max-width:220px;" onchange="loadAdminPenerimaTable()">
+          <option value="">-- Semua Kecamatan --</option>
+          <option value="Kota Juang">Kota Juang</option>
+          <option value="Peusangan">Peusangan</option>
+          <option value="Samalanga">Samalanga</option>
+          <option value="Gandapura">Gandapura</option>
+          <option value="Juli">Juli</option>
+          <option value="Peudada">Peudada</option>
+        </select>
+        <select id="admin-filter-program" class="form-control" style="max-width:220px;" onchange="loadAdminPenerimaTable()">
+          <option value="">-- Semua Program --</option>
+          <option value="PKH">PKH</option>
+          <option value="BPNT">BPNT</option>
+          <option value="BLT-DD">BLT-DD</option>
+          <option value="BANSOS-PANGAN">Bansos Pangan</option>
+        </select>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="admin-penerima-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>NIK KTP</th>
+              <th>Nama Lengkap</th>
+              <th>Kecamatan (Gampong)</th>
+              <th>Program</th>
+              <th>Verifikasi</th>
+              <th>Penyaluran</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="admin-penerima-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: USULAN MANDIRI -->
+    <div class="tab-pane" id="tab-usulan">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>No Usulan</th>
+              <th>NIK / Pengusul</th>
+              <th>Kontak HP</th>
+              <th>Kecamatan & Gampong</th>
+              <th>Program Diusulkan</th>
+              <th>Alasan Pengajuan</th>
+              <th>Status Usulan</th>
+              <th>Aksi Admin</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>USL-202608-001</code></td>
+              <td><strong>Munawar Abdullah</strong><br><small>NIK: 1111010101900009</small></td>
+              <td>085260112233</td>
+              <td>Kota Juang (Geudong-Geudong)</td>
+              <td><span class="program-tag">PKH</span></td>
+              <td><small>Sakit menahun dan menanggung 4 anak sekolah.</small></td>
+              <td><span class="badge badge-warning">Menunggu Verifikasi</span></td>
+              <td>
+                <button class="btn btn-primary btn-sm" onclick="showToast('Usulan disetujui untuk dikirim verifikator', 'success')">Setujui</button>
+                <button class="btn btn-outline btn-sm" style="color:#ef4444;" onclick="showToast('Usulan ditolak', 'info')">Tolak</button>
+              </td>
+            </tr>
+            <tr>
+              <td><code>USL-202608-002</code></td>
+              <td><strong>Syarifah Hanum</strong><br><small>NIK: 1111020203880007</small></td>
+              <td>081269887766</td>
+              <td>Peusangan (Paya Lipah)</td>
+              <td><span class="program-tag">BPNT</span></td>
+              <td><small>Belum pernah mendapat bantuan sosial dan lansia tunggal.</small></td>
+              <td><span class="badge badge-success">Disetujui</span></td>
+              <td><small style="color:#10b981; font-weight:700;">✅ Terverifikasi</small></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: POSKO PENGADUAN -->
+    <div class="tab-pane" id="tab-pengaduan">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Pelapor</th>
+              <th>Kategori</th>
+              <th>Kecamatan</th>
+              <th>Isi Laporan Pengaduan</th>
+              <th>Status Ticket</th>
+              <th>Aksi Response</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>TCK-88201</code></td>
+              <td><strong>Hasan Basri</strong><br><small>082361009988</small></td>
+              <td><span class="badge badge-warning">Bantuan Belum Cair</span></td>
+              <td>Samalanga</td>
+              <td><small>Saldo KKS BPNT belum terisi bulan Juli 2026.</small></td>
+              <td><span class="badge badge-info">Diproses</span></td>
+              <td><button class="btn btn-outline btn-sm" onclick="showToast('Tanggapan dikirim ke whatsapp pelapor', 'info')">💬 Tanggapi</button></td>
+            </tr>
+            <tr>
+              <td><code>TCK-88202</code></td>
+              <td><strong>Rahmat Hidayat</strong><br><small>rahmathdyt@gmail.com</small></td>
+              <td><span class="badge badge-danger">Salah Sasaran</span></td>
+              <td>Kota Juang</td>
+              <td><small>Mohon verifikasi ulang data penerima BLT di gampong kami.</small></td>
+              <td><span class="badge badge-success">Selesai</span></td>
+              <td><small style="color:#10b981; font-weight:700;">✅ Musdes Ulang Done</small></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL TAMBAH DATA PENERIMA BANSOS -->
+  <div class="modal-overlay" id="modal-add">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-weight:700;">Tambah Data Penerima Bansos (DTKS)</h3>
+        <button class="modal-close" onclick="closeModal('modal-add')">&times;</button>
+      </div>
+      <form id="form-add-penerima">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div class="form-group">
+            <label class="form-label">NIK KTP (16 Digit)</label>
+            <input type="text" id="add-nik" class="form-control" required placeholder="111101xxxxxxxxxx" maxlength="16">
+          </div>
+          <div class="form-group">
+            <label class="form-label">No. KK (16 Digit)</label>
+            <input type="text" id="add-nkk" class="form-control" required placeholder="111101xxxxxxxxxx" maxlength="16">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap Penerima</label>
+          <input type="text" id="add-nama" class="form-control" required placeholder="Nama Lengkap KPM">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Jenis Kelamin</label>
+            <select id="add-jk" class="form-control" required>
+              <option value="L">Laki-Laki</option>
+              <option value="P">Perempuan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Program Bansos</label>
+            <select id="add-program" class="form-control" required>
+              <option value="PKH">PKH</option>
+              <option value="BPNT">BPNT (Sembako)</option>
+              <option value="BLT-DD">BLT Dana Desa</option>
+              <option value="BANSOS-PANGAN">Bansos Pangan</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Kecamatan</label>
+            <select id="add-kecamatan" class="form-control" required>
+              <option value="Kota Juang">Kota Juang</option>
+              <option value="Peusangan">Peusangan</option>
+              <option value="Samalanga">Samalanga</option>
+              <option value="Gandapura">Gandapura</option>
+              <option value="Juli">Juli</option>
+              <option value="Peudada">Peudada</option>
+              <option value="Jeunieb">Jeunieb</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gampong / Desa</label>
+            <input type="text" id="add-gampong" class="form-control" required placeholder="Nama Gampong">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Alamat Lengkap</label>
+          <input type="text" id="add-alamat" class="form-control" required placeholder="Dusun / Jalan">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add')">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Data KPM</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
+
+<?php
+/**
+ * REST API Backend untuk SI BANSOS Kabupaten Bireuen
+ * Menyediakan JSON response untuk pencarian, statistik, CRUD Admin, Usulan, & Pengaduan.
+ */
+
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+require_once __DIR__ . '/config.php';
+
+$pdo = getDBConnection();
+$action = isset($_GET['action']) ? trim($_GET['action']) : '';
+
+// Jika PDO null (misal belum setup DB di MySQL), berikan indikator DB_OFFLINE agar JS dapat memakai client fallback
+if (!$pdo) {
+    if ($action === 'check_db') {
+        echo json_encode(['status' => 'offline', 'message' => 'Database MySQL belum terkoneksi. Menggunakan Mode Standalone JS Storage.']);
+        exit();
+    }
+    // Fallback response bila dipanggil via PHP tanpa database active
+    echo json_encode([
+        'status' => 'offline',
+        'message' => 'Koneksi database MySQL offline. Silakan import database.sql dan sesuaikan config.php'
+    ]);
+    exit();
+}
+
+// Route handler berdasarkan action
+switch ($action) {
+    case 'check_db':
+        echo json_encode(['status' => 'online', 'message' => 'Koneksi database MySQL berhasil!']);
+        break;
+
+    // -------------------------------------------------------------
+    // 1. CEK BANSOS PUBLIC SEARCH
+    // -------------------------------------------------------------
+    case 'search_bansos':
+        $query = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $kecamatan = isset($_GET['kecamatan']) ? trim($_GET['kecamatan']) : '';
+
+        if (empty($query) && empty($kecamatan)) {
+            echo json_encode(['status' => 'error', 'message' => 'Masukkan NIK, Nama, atau pilih Kecamatan.']);
+            exit();
+        }
+
+        try {
+            $sql = "SELECT id, CONCAT(SUBSTR(nik,1,6), '********', SUBSTR(nik,15,2)) AS nik_masked, nik, 
+                           nama_lengkap, jenis_kelamin, gampong, kecamatan, program_diterima, 
+                           status_verifikasi, status_penyaluran, tanggal_penyaluran_terakhir, keterangan 
+                    FROM penerima_bansos WHERE 1=1";
+            $params = [];
+
+            if (!empty($query)) {
+                $sql .= " AND (nik LIKE :q OR nama_lengkap LIKE :q OR gampong LIKE :q)";
+                $params['q'] = '%' . $query . '%';
+            }
+
+            if (!empty($kecamatan)) {
+                $sql .= " AND kecamatan = :kecamatan";
+                $params['kecamatan'] = $kecamatan;
+            }
+
+            $sql .= " ORDER BY id DESC LIMIT 50";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll();
+
+            echo json_encode([
+                'status' => 'success',
+                'count' => count($data),
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    // -------------------------------------------------------------
+    // 2. DASHBOARD STATISTIK
+    // -------------------------------------------------------------
+    case 'get_stats':
+        try {
+            $total_penerima = $pdo->query("SELECT COUNT(*) FROM penerima_bansos")->fetchColumn();
+            $total_terverifikasi = $pdo->query("SELECT COUNT(*) FROM penerima_bansos WHERE status_verifikasi = 'Terverifikasi'")->fetchColumn();
+            $total_tersalurkan = $pdo->query("SELECT COUNT(*) FROM penerima_bansos WHERE status_penyaluran = 'Tersalurkan'")->fetchColumn();
+            $total_usulan = $pdo->query("SELECT COUNT(*) FROM usulan_bansos")->fetchColumn();
+            $total_pengaduan = $pdo->query("SELECT COUNT(*) FROM pengaduan")->fetchColumn();
+
+            // Stats per program
+            $program_stats = $pdo->query("SELECT program_diterima, COUNT(*) as total FROM penerima_bansos GROUP BY program_diterima")->fetchAll();
+
+            // Stats per kecamatan
+            $kecamatan_stats = $pdo->query("SELECT kecamatan, COUNT(*) as total FROM penerima_bansos GROUP BY kecamatan ORDER BY total DESC")->fetchAll();
+
+            echo json_encode([
+                'status' => 'success',
+                'summary' => [
+                    'total_penerima' => (int)$total_penerima,
+                    'total_terverifikasi' => (int)$total_terverifikasi,
+                    'total_tersalurkan' => (int)$total_tersalurkan,
+                    'total_usulan' => (int)$total_usulan,
+                    'total_pengaduan' => (int)$total_pengaduan
+                ],
+                'program_stats' => $program_stats,
+                'kecamatan_stats' => $kecamatan_stats
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    // -------------------------------------------------------------
+    // 3. GET LIST PENERIMA BANSOS (ADMIN)
+    // -------------------------------------------------------------
+    case 'list_penerima':
+        try {
+            $kecamatan = isset($_GET['kecamatan']) ? trim($_GET['kecamatan']) : '';
+            $program = isset($_GET['program']) ? trim($_GET['program']) : '';
+            $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+            $sql = "SELECT * FROM penerima_bansos WHERE 1=1";
+            $params = [];
+
+            if (!empty($kecamatan)) {
+                $sql .= " AND kecamatan = :kecamatan";
+                $params['kecamatan'] = $kecamatan;
+            }
+            if (!empty($program)) {
+                $sql .= " AND program_diterima = :program";
+                $params['program'] = $program;
+            }
+            if (!empty($search)) {
+                $sql .= " AND (nik LIKE :search OR nama_lengkap LIKE :search OR gampong LIKE :search)";
+                $params['search'] = '%' . $search . '%';
+            }
+
+            $sql .= " ORDER BY id DESC LIMIT 100";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $data = $stmt->fetchAll();
+
+            echo json_encode(['status' => 'success', 'data' => $data]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    // -------------------------------------------------------------
+    // 4. SUBMIT USULAN MANDIRI (CITIZEN)
+    // -------------------------------------------------------------
+    case 'submit_usulan':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['status' => 'error', 'message' => 'Metode request tidak diizinkan.']);
+            exit();
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+
+        $nik = trim($input['nik'] ?? '');
+        $nama = trim($input['nama'] ?? '');
+        $hp = trim($input['hp'] ?? '');
+        $kecamatan = trim($input['kecamatan'] ?? '');
+        $gampong = trim($input['gampong'] ?? '');
+        $alamat = trim($input['alamat'] ?? '');
+        $program = trim($input['program'] ?? '');
+        $alasan = trim($input['alasan'] ?? '');
+
+        if (empty($nik) || empty($nama) || empty($kecamatan) || empty($gampong) || empty($program)) {
+            echo json_encode(['status' => 'error', 'message' => 'Lengkapi data wajib pengajuan usulan.']);
+            exit();
+        }
+
+        try {
+            $no_usulan = 'USL-' . date('Ym') . '-' . rand(100, 999);
+            $stmt = $pdo->prepare("INSERT INTO usulan_bansos (no_usulan, nik, nama_pengusul, no_hp, kecamatan, gampong, alamat_lengkap, program_diusulkan, alasan_pengajuan) VALUES (:no_usulan, :nik, :nama, :hp, :kecamatan, :gampong, :alamat, :program, :alasan)");
+            $stmt->execute([
+                'no_usulan' => $no_usulan,
+                'nik' => $nik,
+                'nama' => $nama,
+                'hp' => $hp,
+                'kecamatan' => $kecamatan,
+                'gampong' => $gampong,
+                'alamat' => $alamat,
+                'program' => $program,
+                'alasan' => $alasan
+            ]);
+
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Usulan bansos berhasil dikirim!',
+                'no_usulan' => $no_usulan
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    // -------------------------------------------------------------
+    // 5. SUBMIT PENGADUAN (LAPOR BANSOS)
+    // -------------------------------------------------------------
+    case 'submit_pengaduan':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['status' => 'error', 'message' => 'Metode request tidak diizinkan.']);
+            exit();
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+
+        $nama = trim($input['nama'] ?? '');
+        $email_hp = trim($input['email_hp'] ?? '');
+        $kategori = trim($input['kategori'] ?? '');
+        $kecamatan = trim($input['kecamatan'] ?? '');
+        $isi = trim($input['isi'] ?? '');
+
+        if (empty($nama) || empty($email_hp) || empty($kategori) || empty($isi)) {
+            echo json_encode(['status' => 'error', 'message' => 'Lengkapi form pengaduan.']);
+            exit();
+        }
+
+        try {
+            $ticket_id = 'TCK-' . rand(10000, 99999);
+            $stmt = $pdo->prepare("INSERT INTO pengaduan (ticket_id, nama_pelapor, email_hp, kategori, kecamatan, isi_laporan) VALUES (:ticket_id, :nama, :email_hp, :kategori, :kecamatan, :isi)");
+            $stmt->execute([
+                'ticket_id' => $ticket_id,
+                'nama' => $nama,
+                'email_hp' => $email_hp,
+                'kategori' => $kategori,
+                'kecamatan' => $kecamatan,
+                'isi' => $isi
+            ]);
+
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Laporan pengaduan berhasil dikirim!',
+                'ticket_id' => $ticket_id
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    // -------------------------------------------------------------
+    // 6. ADD PENERIMA BARU (ADMIN)
+    // -------------------------------------------------------------
+    case 'add_penerima':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['status' => 'error', 'message' => 'Metode tidak valid.']);
+            exit();
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+
+        try {
+            $stmt = $pdo->prepare("INSERT INTO penerima_bansos (nik, nkk, nama_lengkap, jenis_kelamin, alamat, gampong, kecamatan, pekerjaan, penghasilan_bulanan, jumlah_tanggungan, program_diterima, status_verifikasi, status_penyaluran, keterangan) VALUES (:nik, :nkk, :nama, :jk, :alamat, :gampong, :kecamatan, :pekerjaan, :penghasilan, :tanggungan, :program, :verifikasi, :penyaluran, :keterangan)");
+            $stmt->execute([
+                'nik' => $input['nik'],
+                'nkk' => $input['nkk'],
+                'nama' => $input['nama_lengkap'],
+                'jk' => $input['jenis_kelamin'],
+                'alamat' => $input['alamat'],
+                'gampong' => $input['gampong'],
+                'kecamatan' => $input['kecamatan'],
+                'pekerjaan' => $input['pekerjaan'] ?? 'Buruh',
+                'penghasilan' => (int)($input['penghasilan_bulanan'] ?? 0),
+                'tanggungan' => (int)($input['jumlah_tanggungan'] ?? 1),
+                'program' => $input['program_diterima'],
+                'verifikasi' => $input['status_verifikasi'] ?? 'Terverifikasi',
+                'penyaluran' => $input['status_penyaluran'] ?? 'Tersalurkan',
+                'keterangan' => $input['keterangan'] ?? ''
+            ]);
+
+            echo json_encode(['status' => 'success', 'message' => 'Data penerima berhasil ditambahkan.']);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    // -------------------------------------------------------------
+    // 7. DELETE PENERIMA (ADMIN)
+    // -------------------------------------------------------------
+    case 'delete_penerima':
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if ($id <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'ID tidak valid.']);
+            exit();
+        }
+        try {
+            $stmt = $pdo->prepare("DELETE FROM penerima_bansos WHERE id = :id");
+            $stmt->execute(['id' => $id]);
+            echo json_encode(['status' => 'success', 'message' => 'Data berhasil dihapus.']);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        break;
+
+    default:
+        echo json_encode(['status' => 'error', 'message' => 'Action tidak dikenali.']);
+        break;
+}
+?>
+
+<?php
+/**
+ * Konfigurasi Database & Aplikasi SI BANSOS Kabupaten Bireuen
+ * Siap Upload ke Web Hosting (cPanel / Shared Hosting / VPS)
+ */
+
+// Konfigurasi Database MySQL
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');           // Ubah sesuai username database hosting Anda
+define('DB_PASS', '');               // Ubah sesuai password database hosting Anda
+define('DB_NAME', 'db_sibansos_bireuen'); // Ubah sesuai nama database hosting Anda
+
+// Pengaturan Aplikasi
+define('APP_NAME', 'SI-BANSOS Kabupaten Bireuen');
+define('APP_TAGLINE', 'Sistem Informasi Data Terpadu Kesejahteraan Sosial & Penyaluran Bantuan Sosial');
+define('DISTRICT_NAME', 'Kabupaten Bireuen');
+define('PROVINCE_NAME', 'Aceh');
+
+// Function Koneksi Database PDO
+function getDBConnection() {
+    static $pdo = null;
+    if ($pdo === null) {
+        try {
+            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+            $options = [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+            ];
+            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+        } catch (PDOException $e) {
+            // Jika koneksi database gagal, kembalikan null (frontend akan memakai fallback client storage/mock data secara otomatis)
+            return null;
+        }
+    }
+    return $pdo;
+}
+
+// Security Response Headers
+header("X-XSS-Protection: 1; mode=block");
+header("X-Content-Type-Options: nosniff");
+header("X-Frame-Options: SAMEORIGIN");
+?>
+
+-- ============================================================
+-- DATABASE SCHEME & DATA AWAL SI-BANSOS KABUPATEN BIREUEN
+-- Import file ini melalui phpMyAdmin atau MySQL CLI di Web Hosting
+-- ============================================================
+
+CREATE DATABASE IF NOT EXISTS `db_sibansos_bireuen` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `db_sibansos_bireuen`;
+
+-- --------------------------------------------------------
+-- 1. TABEL PROGRAM BANSOS
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `program_bansos`;
+CREATE TABLE `program_bansos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kode_program` varchar(20) NOT NULL UNIQUE,
+  `nama_program` varchar(100) NOT NULL,
+  `deskripsi` text DEFAULT NULL,
+  `penyelenggara` varchar(100) NOT NULL,
+  `nominal_bantuan` varchar(100) DEFAULT NULL,
+  `periode` varchar(50) DEFAULT NULL,
+  `kuota_nasional_daerah` int(11) DEFAULT 0,
+  `status` enum('Aktif','Non-Aktif') DEFAULT 'Aktif',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `program_bansos` (`id`, `kode_program`, `nama_program`, `deskripsi`, `penyelenggara`, `nominal_bantuan`, `periode`, `kuota_nasional_daerah`, `status`) VALUES
+(1, 'PKH', 'Program Keluarga Harapan (PKH)', 'Bantuan sosial bersyarat kepada Keluarga Miskin (KM) yang ditetapkan sebagai keluarga penerima manfaat.', 'Kementerian Sosial RI', 'Rp 225.000 - Rp 750.000 / Tahap', 'Triwulan (4 Tahap / Tahun)', 18450, 'Aktif'),
+(2, 'BPNT', 'Bantuan Pangan Non-Tunai (Sembako)', 'Bantuan pangan dalam bentuk uang tunai/saldo elektronik untuk pembelian bahan pokok beras dan telur.', 'Kementerian Sosial RI', 'Rp 200.000 / Bulan', 'Setiap Bulan', 24200, 'Aktif'),
+(3, 'BLT-DD', 'Bantuan Langsung Tunai Dana Desa', 'Pemberian uang tunai kepada keluarga miskin di desa bersumber dari Dana Desa untuk mengurangi dampak ekonomi.', 'Pemerintah Desa / Gampong', 'Rp 300.000 / Bulan', 'Setiap Bulan', 12100, 'Aktif'),
+(4, 'BANSOS-PANGAN', 'Bantuan Cadangan Pangan Beras 10Kg', 'Bantuan beras cadangan pemerintah 10 kg per KPM untuk menjaga ketahanan pangan masyarakat miskin.', 'Badan Pangan Nasional & Perum BULOG', '10 Kg Beras Medium / Bulan', 'Bulanan', 31500, 'Aktif');
+
+-- --------------------------------------------------------
+-- 2. TABEL PENERIMA BANSOS (DTKS)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `penerima_bansos`;
+CREATE TABLE `penerima_bansos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nik` varchar(16) NOT NULL UNIQUE,
+  `nkk` varchar(16) NOT NULL,
+  `nama_lengkap` varchar(100) NOT NULL,
+  `jenis_kelamin` enum('L','P') NOT NULL,
+  `alamat` text NOT NULL,
+  `gampong` varchar(100) NOT NULL,
+  `kecamatan` varchar(100) NOT NULL,
+  `kabupaten` varchar(100) DEFAULT 'Kabupaten Bireuen',
+  `pekerjaan` varchar(100) DEFAULT NULL,
+  `penghasilan_bulanan` int(11) DEFAULT 0,
+  `jumlah_tanggungan` int(11) DEFAULT 1,
+  `program_diterima` varchar(100) NOT NULL,
+  `status_verifikasi` enum('Terverifikasi','Proses Verifikasi','Ditolak') DEFAULT 'Terverifikasi',
+  `status_penyaluran` enum('Tersalurkan','Siap Salur','Tertunda') DEFAULT 'Tersalurkan',
+  `tanggal_penyaluran_terakhir` date DEFAULT NULL,
+  `keterangan` text DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_nik` (`nik`),
+  KEY `idx_kecamatan` (`kecamatan`),
+  KEY `idx_program` (`program_diterima`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `penerima_bansos` (`id`, `nik`, `nkk`, `nama_lengkap`, `jenis_kelamin`, `alamat`, `gampong`, `kecamatan`, `pekerjaan`, `penghasilan_bulanan`, `jumlah_tanggungan`, `program_diterima`, `status_verifikasi`, `status_penyaluran`, `tanggal_penyaluran_terakhir`, `keterangan`) VALUES
+(1, '1111011504820001', '1111012003050012', 'Teuku Iskandar Muda', 'L', 'Jl. T. Hamzah Bendahara No. 12', 'Gampong Kota Bireuen', 'Kota Juang', 'Buruh Harian Lepas', 850000, 4, 'PKH', 'Terverifikasi', 'Tersalurkan', '2026-07-15', 'Tersalurkan lewat PT Pos Indonesia'),
+(2, '1111025208850003', '1111021406080045', 'Cut Nurhayati', 'P', 'Dusun Matang Mesjid', 'Matangglumpangdua', 'Peusangan', 'Pedagang Kecil', 950000, 3, 'BPNT', 'Terverifikasi', 'Tersalurkan', '2026-07-20', 'Penyaluran via Bank BSI'),
+(3, '1111030811780002', '1111031902040089', 'Muhammad Dahlan', 'L', 'Jl. Banda Aceh - Medan Km. 210', 'Keude Samalanga', 'Samalanga', 'Petani', 700000, 5, 'BLT-DD', 'Terverifikasi', 'Tersalurkan', '2026-08-01', 'Tersalurkan oleh Kantor Keuchik'),
+(4, '1111044403910005', '1111042509120034', 'Siti Rahmah', 'P', 'Dusun Cot Teube', 'Gandapura', 'Gandapura', 'Mengurus Rumah Tangga', 600000, 4, 'BANSOS-PANGAN', 'Terverifikasi', 'Tersalurkan', '2026-08-05', 'Beras 10kg diterima di Balai Desa'),
+(5, '1111051210800004', '1111050207030021', 'Zulkifli Ahmad', 'L', 'Dusun Buket Rumiya', 'Juli Paseh', 'Juli', 'Pekebun', 900000, 3, 'PKH', 'Terverifikasi', 'Siap Salur', '2026-06-12', 'Jadwal pencairan tahap berikutnya'),
+(6, '1111066105890006', '1111061801100077', 'Fatimah Azzahra', 'P', 'Dusun Krueng Simpo', 'Peudada', 'Peudada', 'Nelayan / Pengolah Ikan', 750000, 4, 'BPNT', 'Terverifikasi', 'Tersalurkan', '2026-07-18', 'Penyaluran via e-Warong BSI'),
+(7, '1111072202750001', '1111071111010055', 'Husaini Zakaria', 'L', 'Dusun Blang Seupeung', 'Jeunieb', 'Jeunieb', 'Buruh Tani', 650000, 5, 'BLT-DD', 'Terverifikasi', 'Tersalurkan', '2026-08-02', 'Disalurkan oleh Perangkat Gampong'),
+(8, '1111084907930008', '1111080404150066', 'Marlina Usman', 'P', 'Dusun Pandrah Jantho', 'Pandrah', 'Pandrah', 'Jual Jajanan', 500000, 2, 'BANSOS-PANGAN', 'Proses Verifikasi', 'Tertunda', NULL, 'Perlu pemutakhiran data KK terbaru'),
+(9, '1111091708870009', '1111092809090033', 'Bhaktiar Ismail', 'L', 'Dusun Leubu', 'Makmur', 'Makmur', 'Petani Sawit', 1000000, 3, 'PKH', 'Terverifikasi', 'Tersalurkan', '2026-07-10', 'Rekening BSI aktif'),
+(10, '1111106312900007', '1111101505110044', 'Nuraini Sulaiman', 'P', 'Dusun Kuta Blang Batee', 'Kuta Blang', 'Kuta Blang', 'Wiraswasta Kecil', 800000, 3, 'BPNT', 'Terverifikasi', 'Tersalurkan', '2026-07-25', 'Tersalurkan secara berkala');
+
+-- --------------------------------------------------------
+-- 3. TABEL USULAN MANDIRI (PENGAJUAN WARGA)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `usulan_bansos`;
+CREATE TABLE `usulan_bansos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `no_usulan` varchar(30) NOT NULL UNIQUE,
+  `nik` varchar(16) NOT NULL,
+  `nama_pengusul` varchar(100) NOT NULL,
+  `no_hp` varchar(20) NOT NULL,
+  `kecamatan` varchar(100) NOT NULL,
+  `gampong` varchar(100) NOT NULL,
+  `alamat_lengkap` text NOT NULL,
+  `program_diusulkan` varchar(100) NOT NULL,
+  `alasan_pengajuan` text NOT NULL,
+  `status` enum('Menunggu Verifikasi','Disetujui','Ditolak') DEFAULT 'Menunggu Verifikasi',
+  `catatan_petugas` text DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `usulan_bansos` (`id`, `no_usulan`, `nik`, `nama_pengusul`, `no_hp`, `kecamatan`, `gampong`, `alamat_lengkap`, `program_diusulkan`, `alasan_pengajuan`, `status`, `catatan_petugas`) VALUES
+(1, 'USL-202608-001', '1111010101900009', 'Munawar Abdullah', '085260112233', 'Kota Juang', 'Geudong-Geudong', 'Jl. Elang No. 45 Bireuen', 'PKH', 'Penghasilan menurun drastis akibat sakit menahun dan menanggung 4 anak sekolah.', 'Menunggu Verifikasi', 'Jadwal survei lapangan Dinas Sosial minggu ini'),
+(2, 'USL-202608-002', '1111020203880007', 'Syarifah Hanum', '081269887766', 'Peusangan', 'Paya Lipah', 'Dusun Mawar Paya Lipah', 'BPNT', 'Belum pernah mendapat bantuan sosial dan tergolong keluarga kurang mampu di Gampong.', 'Disetujui', 'Data dimasukkan dalam usulan DTKS periode berikutnya');
+
+-- --------------------------------------------------------
+-- 4. TABEL PENGADUAN & ASPIRASI (LAPOR BANSOS)
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `pengaduan`;
+CREATE TABLE `pengaduan` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ticket_id` varchar(30) NOT NULL UNIQUE,
+  `nama_pelapor` varchar(100) NOT NULL,
+  `email_hp` varchar(100) NOT NULL,
+  `kategori` enum('Pungli / Pemotongan','Salah Sasaran','Bantuan Belum Cair','Data Tidak Sesuai','Lainnya') NOT NULL,
+  `kecamatan` varchar(100) NOT NULL,
+  `isi_laporan` text NOT NULL,
+  `status` enum('Baru','Diproses','Selesai','Ditolak') DEFAULT 'Baru',
+  `tanggapan_admin` text DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `pengaduan` (`id`, `ticket_id`, `nama_pelapor`, `email_hp`, `kategori`, `kecamatan`, `isi_laporan`, `status`, `tanggapan_admin`) VALUES
+(1, 'TCK-88201', 'Hasan Basri', '082361009988', 'Bantuan Belum Cair', 'Samalanga', 'Sudah terdaftar di DTKS tetapi saldo bantuan BPNT bulan Juli belum masuk ke KKS BSI.', 'Diproses', 'Tim Posko Bansos sedang mengkoordinasikan dengan pihak Bank BSI Cabang Bireuen.'),
+(2, 'TCK-88202', 'Rahmat Hidayat', 'rahmathdyt@gmail.com', 'Salah Sasaran', 'Kota Juang', 'Mohon verifikasi ulang data penerima BLT di lingkungan tempat tinggal kami karena ada warga mampu yang terdata.', 'Selesai', 'Terima kasih atas laporannya. Tim Verifikator telah melakukan Musdes ulang.');
+
+-- --------------------------------------------------------
+-- 5. TABEL USER ADMIN / PETUGAS
+-- --------------------------------------------------------
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL UNIQUE,
+  `password_hash` varchar(255) NOT NULL,
+  `nama_petugas` varchar(100) NOT NULL,
+  `role` enum('Super Admin','Operator Dinas','Petugas Kecamatan') DEFAULT 'Operator Dinas',
+  `kecamatan_tugas` varchar(100) DEFAULT 'Kabupaten Bireuen',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Password default: 'admin123' (hash MD5/Bcrypt sample)
+INSERT INTO `users` (`id`, `username`, `password_hash`, `nama_petugas`, `role`, `kecamatan_tugas`) VALUES
+(1, 'admin', '$2y$10$4nC0F5Jc.Yd.3mJ4O.4QCeZ44H8L44O0K5e0z00z00z00z00z00z0', 'Administrator Dinsos Bireuen', 'Super Admin', 'Semua Kecamatan'),
+(2, 'operator_kotajuang', '$2y$10$4nC0F5Jc.Yd.3mJ4O.4QCeZ44H8L44O0K5e0z00z00z00z00z00z0', 'Petugas Kota Juang', 'Petugas Kecamatan', 'Kota Juang');
+
+<?php
+require_once __DIR__ . '/config.php';
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI-BANSOS | Sistem Informasi Bantuan Sosial Kabupaten Bireuen</title>
+  <meta name="description" content="Portal Resmi Sistem Informasi Data Terpadu Kesejahteraan Sosial (DTKS) & Penyaluran Bantuan Sosial Kabupaten Bireuen, Provinsi Aceh.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <!-- Chart.js CDN for statistics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="container">
+      <div class="top-bar-info">
+        <span>📍 Dinas Sosial Kabupaten Bireuen, Provinsi Aceh</span>
+        <span>📞 Layanan Posko Bansos: (0644) 321-456</span>
+      </div>
+      <div>
+        <span>🕒 Jam Layanan: Senin - Jumat (08.00 - 16.30 WIB)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.php" class="brand">
+        <div class="brand-emblem">SB</div>
+        <div class="brand-text">
+          <h1>SI-BANSOS</h1>
+          <span>Kabupaten Bireuen</span>
+        </div>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#beranda" class="active">Beranda</a></li>
+        <li><a href="#cek-bansos">Cek Bansos</a></li>
+        <li><a href="#program">Program Bansos</a></li>
+        <li><a href="#usulan">Pengajuan Usulan</a></li>
+        <li><a href="#pengaduan">Lapor / Pengaduan</a></li>
+        <li><a href="admin.php" class="btn btn-primary btn-sm">🔒 Portal Admin</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="beranda">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-badge">
+            <span>🛡️ Portal Resmi Dinas Sosial Kabupaten Bireuen</span>
+          </div>
+          <h2 class="hero-title">Transparansi & Kemudahan <span>Cek Data Bantuan Sosial</span></h2>
+          <p class="hero-desc">
+            Sistem terpadu pengecekan penerima Bantuan Sosial (PKH, BPNT, BLT-DD, Bansos Pangan) secara transparan, akurat, dan dapat diakses langsung oleh seluruh warga masyarakat Kabupaten Bireuen.
+          </p>
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <a href="#cek-bansos" class="btn btn-primary">🔍 Cek Bansos Sekarang</a>
+            <a href="#usulan" class="btn btn-outline" style="color:white; border-color:rgba(255,255,255,0.4);">📝 Form Usulan Mandiri</a>
+          </div>
+        </div>
+
+        <!-- Card Search -->
+        <div class="search-card" id="cek-bansos">
+          <h3>🔍 Cek Penerima Bansos</h3>
+          <p>Cari berdasarkan NIK KTP atau Nama Penerima Manfaat (KPM)</p>
+          <form id="form-cek-bansos">
+            <div class="form-group">
+              <label class="form-label" for="search-query">NIK KTP atau Nama Lengkap</label>
+              <input type="text" id="search-query" class="form-control" placeholder="Contoh: 1111011504820001 atau Iskandar">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="search-kecamatan">Pilih Kecamatan (Opsional)</label>
+              <select id="search-kecamatan" class="form-control">
+                <option value="">-- Semua Kecamatan di Bireuen --</option>
+                <option value="Kota Juang">Kota Juang</option>
+                <option value="Peusangan">Peusangan</option>
+                <option value="Samalanga">Samalanga</option>
+                <option value="Gandapura">Gandapura</option>
+                <option value="Juli">Juli</option>
+                <option value="Peudada">Peudada</option>
+                <option value="Jeunieb">Jeunieb</option>
+                <option value="Pandrah">Pandrah</option>
+                <option value="Makmur">Makmur</option>
+                <option value="Kuta Blang">Kuta Blang</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Cari Data Penerima</button>
+          </form>
+        </div>
+      </div>
+      
+      <div id="search-results"></div>
+    </div>
+  </section>
+
+  <!-- Summary Stats -->
+  <section class="section" style="padding-top:0;">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon green">👥</div>
+          <div class="stat-info">
+            <h4>86.250</h4>
+            <p>Total KPM Terdaftar DTKS</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber">💳</div>
+          <div class="stat-info">
+            <h4>Rp 42,5 M</h4>
+            <p>Anggaran Bansos Tersalurkan</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">🏛️</div>
+          <div class="stat-info">
+            <h4>17</h4>
+            <p>Kecamatan Terjangkau</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-info">
+            <h4>98,4%</h4>
+            <p>Tingkat Realisasi Salur</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Program Bansos Section -->
+  <section class="section" id="program" style="background:#f1f5f9;">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-subtitle">Jenis Bantuan</div>
+        <h2 class="section-title">Program Bantuan Sosial Utama</h2>
+        <p class="section-desc">Ketahui berbagai program bantuan sosial pemerintah yang disalurkan bagi masyarakat Kabupaten Bireuen.</p>
+      </div>
+
+      <div class="program-grid">
+        <div class="program-card">
+          <div>
+            <span class="program-tag">Kemensos RI</span>
+            <h4>Program Keluarga Harapan (PKH)</h4>
+            <p>Bantuan sosial bersyarat kepada Keluarga Miskin (KM) untuk akses kesehatan, pendidikan, dan kesejahteraan sosial.</p>
+          </div>
+          <div class="program-meta">
+            <span>Nominal: s/d Rp 750rb/Tahap</span>
+            <span>4 Tahap / Thn</span>
+          </div>
+        </div>
+
+        <div class="program-card">
+          <div>
+            <span class="program-tag">Sembako</span>
+            <h4>Bantuan Pangan Non-Tunai (BPNT)</h4>
+            <p>Bantuan dalam bentuk saldo elektronik / uang tunai via Bank BSI untuk pemenuhan kebutuhan bahan pokok harian.</p>
+          </div>
+          <div class="program-meta">
+            <span>Nominal: Rp 200rb/Bulan</span>
+            <span>Setiap Bulan</span>
+          </div>
+        </div>
+
+        <div class="program-card">
+          <div>
+            <span class="program-tag">Dana Desa</span>
+            <h4>BLT Dana Desa (BLT-DD)</h4>
+            <p>Pemberian uang tunai bagi keluarga miskin di setiap Gampong/Desa bersumber dari alokasi Dana Desa.</p>
+          </div>
+          <div class="program-meta">
+            <span>Nominal: Rp 300rb/Bulan</span>
+            <span>Tingkat Gampong</span>
+          </div>
+        </div>
+
+        <div class="program-card">
+          <div>
+            <span class="program-tag">Cadangan Pangan</span>
+            <h4>Bansos Beras 10 KG</h4>
+            <p>Bantuan pangan cadangan beras pemerintah untuk menjaga stabilitas harga dan ketahanan pangan rumah tangga.</p>
+          </div>
+          <div class="program-meta">
+            <span>Paket: 10 Kg Beras</span>
+            <span>Bulanan</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Form Usulan Mandiri -->
+  <section class="section" id="usulan">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-subtitle">Layanan Publik</div>
+        <h2 class="section-title">Formulir Usulan Mandiri Bansos</h2>
+        <p class="section-desc">Masyarakat atau anggota keluarga kurang mampu yang belum terdaftar dapat mengajukan usulan mandiri untuk dikaji oleh Dinas Sosial.</p>
+      </div>
+
+      <div style="max-width:760px; margin:0 auto; background:white; padding:36px; border-radius:18px; border:1px solid #e2e8f0; box-shadow:var(--shadow-md);">
+        <form id="form-usulan">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label class="form-label" for="usulan-nik">NIK KTP (16 Digit)</label>
+              <input type="text" id="usulan-nik" class="form-control" placeholder="111101xxxxxxxxxx" maxlength="16" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="usulan-nama">Nama Lengkap Sesuai KTP</label>
+              <input type="text" id="usulan-nama" class="form-control" placeholder="Nama Lengkap" required>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label class="form-label" for="usulan-hp">No. Handphone / WhatsApp</label>
+              <input type="tel" id="usulan-hp" class="form-control" placeholder="0852xxxxxxxx" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="usulan-program">Program yang Diusulkan</label>
+              <select id="usulan-program" class="form-control" required>
+                <option value="PKH">Program Keluarga Harapan (PKH)</option>
+                <option value="BPNT">BPNT / Sembako</option>
+                <option value="BLT-DD">BLT Dana Desa</option>
+                <option value="BANSOS-PANGAN">Bansos Cadangan Pangan</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label class="form-label" for="usulan-kecamatan">Kecamatan</label>
+              <select id="usulan-kecamatan" class="form-control" required>
+                <option value="Kota Juang">Kota Juang</option>
+                <option value="Peusangan">Peusangan</option>
+                <option value="Samalanga">Samalanga</option>
+                <option value="Gandapura">Gandapura</option>
+                <option value="Juli">Juli</option>
+                <option value="Peudada">Peudada</option>
+                <option value="Jeunieb">Jeunieb</option>
+                <option value="Pandrah">Pandrah</option>
+                <option value="Makmur">Makmur</option>
+                <option value="Kuta Blang">Kuta Blang</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="usulan-gampong">Nama Gampong / Desa</label>
+              <input type="text" id="usulan-gampong" class="form-control" placeholder="Contoh: Gampong Kota Bireuen" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="usulan-alamat">Alamat Lengkap (Dusun / Jalan / No. Rumah)</label>
+            <input type="text" id="usulan-alamat" class="form-control" placeholder="Alamat tempat tinggal saat ini" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="usulan-alasan">Alasan Pengajuan / Kondisi Ekonomi</label>
+            <textarea id="usulan-alasan" class="form-control" rows="3" placeholder="Jelaskan kondisi ekonomi, pekerjaan, dan tanggungan keluarga..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;">Kirim Pengajuan Usulan</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lapor / Pengaduan -->
+  <section class="section" id="pengaduan" style="background:#f8fafc;">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-subtitle">Layanan Pengaduan</div>
+        <h2 class="section-title">Posko Lapor Bansos Bireuen</h2>
+        <p class="section-desc">Laporkan jika ada indikasi pungli, pemotongan dana, masalah rekening, atau ketidaktepatan sasaran bantuan.</p>
+      </div>
+
+      <div style="max-width:760px; margin:0 auto; background:white; padding:36px; border-radius:18px; border:1px solid #e2e8f0;">
+        <form id="form-pengaduan">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label class="form-label" for="pengaduan-nama">Nama Pelapor</label>
+              <input type="text" id="pengaduan-nama" class="form-control" placeholder="Nama Anda" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pengaduan-kontak">Email atau No. WhatsApp</label>
+              <input type="text" id="pengaduan-kontak" class="form-control" placeholder="08xxxx / email@domain.com" required>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label class="form-label" for="pengaduan-kategori">Kategori Laporan</label>
+              <select id="pengaduan-kategori" class="form-control" required>
+                <option value="Bantuan Belum Cair">Bantuan Belum Cair / Saldo Nol</option>
+                <option value="Pungli / Pemotongan">Pungli / Pemotongan Bantuan</option>
+                <option value="Salah Sasaran">Penerima Tidak Layak (Salah Sasaran)</option>
+                <option value="Data Tidak Sesuai">Data KTP / KK Tidak Sesuai</option>
+                <option value="Lainnya">Lain-Lain</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="pengaduan-kecamatan">Kecamatan Kejadian</label>
+              <select id="pengaduan-kecamatan" class="form-control" required>
+                <option value="Kota Juang">Kota Juang</option>
+                <option value="Peusangan">Peusangan</option>
+                <option value="Samalanga">Samalanga</option>
+                <option value="Gandapura">Gandapura</option>
+                <option value="Juli">Juli</option>
+                <option value="Peudada">Peudada</option>
+                <option value="Jeunieb">Jeunieb</option>
+                <option value="Pandrah">Pandrah</option>
+                <option value="Makmur">Makmur</option>
+                <option value="Kuta Blang">Kuta Blang</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pengaduan-isi">Rincian Laporan Pengaduan</label>
+            <textarea id="pengaduan-isi" class="form-control" rows="4" placeholder="Tulis rincian lokasi gampong, kronologi kejadian, dan informasi terkait..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-amber" style="width:100%;">Kirim Pengaduan</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>SI-BANSOS Kabupaten Bireuen</h3>
+          <p>Sistem Informasi Data Terpadu Kesejahteraan Sosial & Penyaluran Bantuan Sosial Pemerintah Kabupaten Bireuen, Aceh.</p>
+          <p style="margin-top:10px; font-size:0.85rem; color:#94a3b8;">Alamat Kantor: Jl. T. Hamzah Bendahara No. 1, Kota Bireuen, Aceh</p>
+        </div>
+        <div>
+          <h4 style="color:white; margin-bottom:14px;">Navigasi Cepat</h4>
+          <p><a href="#cek-bansos" style="color:#cbd5e1;">Cek Data Bansos</a></p>
+          <p><a href="#program" style="color:#cbd5e1;">Program Bantuan</a></p>
+          <p><a href="#usulan" style="color:#cbd5e1;">Form Usulan</a></p>
+          <p><a href="#pengaduan" style="color:#cbd5e1;">Posko Lapor</a></p>
+        </div>
+        <div>
+          <h4 style="color:white; margin-bottom:14px;">Kontak Darurat</h4>
+          <p style="color:#cbd5e1;">Call Center: 1500-299</p>
+          <p style="color:#cbd5e1;">WhatsApp: 0852-6000-8899</p>
+          <p style="color:#cbd5e1;">Email: dinsos@bireuenkab.go.id</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 Pemerintah Kabupaten Bireuen. Hak Cipta Dilindungi Undang-Undang.</p>
+        <p>Powered by Dinas Sosial Bireuen - Ready for Web Hosting</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
+
+<?php
+/**
+ * SI-BANSOS KABUPATEN BIREUEN - WEB INSTALLER WIZARD
+ * Web-based installation wizard to set up database & config automatically.
+ */
+
+session_start();
+
+$step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
+$error = '';
+$success = '';
+
+// Path ke file penting
+$configFile = __DIR__ . '/config.php';
+$sqlFile = __DIR__ . '/database.sql';
+
+// ----------------------------------------------------------------------
+// ACTION STEP 2: PROSES KONEKSI & IMPORT DATABASE
+// ----------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_install'])) {
+    $db_host = trim($_POST['db_host']);
+    $db_name = trim($_POST['db_name']);
+    $db_user = trim($_POST['db_user']);
+    $db_pass = trim($_POST['db_pass']);
+
+    if (empty($db_host) || empty($db_name) || empty($db_user)) {
+        $error = 'Harap isi Host, Nama Database, dan Username Database!';
+    } else {
+        try {
+            // 1. Tes Koneksi ke Server MySQL
+            $pdo = new PDO("mysql:host=$db_host;charset=utf8mb4", $db_user, $db_pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+            ]);
+
+            // 2. Buat Database jika belum ada
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `$db_name` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $pdo->exec("USE `$db_name`");
+
+            // 3. Baca dan Eksekusi SQL File
+            if (!file_exists($sqlFile)) {
+                throw new Exception("File database.sql tidak ditemukan di direktori website.");
+            }
+
+            $sqlContent = file_get_contents($sqlFile);
+            
+            // Eksekusi query secara bertahap
+            $statements = array_filter(array_map('trim', explode(';', $sqlContent)));
+            foreach ($statements as $stmt) {
+                if (!empty($stmt) && strpos($stmt, 'CREATE DATABASE') === false && strpos($stmt, 'USE `') === false) {
+                    $pdo->exec($stmt);
+                }
+            }
+
+            // 4. Update File config.php
+            $configContent = "<?php\n";
+            $configContent .= "/**\n";
+            $configContent .= " * Konfigurasi Database & Aplikasi SI BANSOS Kabupaten Bireuen\n";
+            $configContent .= " * Di-generate otomatis oleh Web Installer\n";
+            $configContent .= " */\n\n";
+            $configContent .= "// Konfigurasi Database MySQL\n";
+            $configContent .= "define('DB_HOST', " . var_export($db_host, true) . ");\n";
+            $configContent .= "define('DB_USER', " . var_export($db_user, true) . ");\n";
+            $configContent .= "define('DB_PASS', " . var_export($db_pass, true) . ");\n";
+            $configContent .= "define('DB_NAME', " . var_export($db_name, true) . ");\n\n";
+            $configContent .= "// Pengaturan Aplikasi\n";
+            $configContent .= "define('APP_NAME', 'SI-BANSOS Kabupaten Bireuen');\n";
+            $configContent .= "define('APP_TAGLINE', 'Sistem Informasi Data Terpadu Kesejahteraan Sosial & Penyaluran Bantuan Sosial');\n";
+            $configContent .= "define('DISTRICT_NAME', 'Kabupaten Bireuen');\n";
+            $configContent .= "define('PROVINCE_NAME', 'Aceh');\n\n";
+            $configContent .= "// Function Koneksi Database PDO\n";
+            $configContent .= "function getDBConnection() {\n";
+            $configContent .= "    static \$pdo = null;\n";
+            $configContent .= "    if (\$pdo === null) {\n";
+            $configContent .= "        try {\n";
+            $configContent .= "            \$dsn = \"mysql:host=\" . DB_HOST . \";dbname=\" . DB_NAME . \";charset=utf8mb4\";\n";
+            $configContent .= "            \$options = [\n";
+            $configContent .= "                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,\n";
+            $configContent .= "                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,\n";
+            $configContent .= "                PDO::ATTR_EMULATE_PREPARES   => false,\n";
+            $configContent .= "            ];\n";
+            $configContent .= "            \$pdo = new PDO(\$dsn, DB_USER, DB_PASS, \$options);\n";
+            $configContent .= "        } catch (PDOException \$e) {\n";
+            $configContent .= "            return null;\n";
+            $configContent .= "        }\n";
+            $configContent .= "    }\n";
+            $configContent .= "    return \$pdo;\n";
+            $configContent .= "}\n\n";
+            $configContent .= "header(\"X-XSS-Protection: 1; mode=block\");\n";
+            $configContent .= "header(\"X-Content-Type-Options: nosniff\");\n";
+            $configContent .= "header(\"X-Frame-Options: SAMEORIGIN\");\n";
+            $configContent .= "?>\n";
+
+            file_put_contents($configFile, $configContent);
+
+            // Pindah ke Step 3 (Selesai)
+            header("Location: install.php?step=3");
+            exit();
+
+        } catch (Exception $e) {
+            $error = 'Gagal melakukan instalasi: ' . $e->getMessage();
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installer Website | SI-BANSOS Kabupaten Bireuen</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    body { background: #0f172a; color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .install-card { background: white; color: #1e293b; max-width: 650px; width: 100%; border-radius: 18px; padding: 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .step-indicator { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+    .step-item { font-weight: 700; font-size: 0.85rem; color: #94a3b8; }
+    .step-item.active { color: #059669; }
+    .alert-danger { background: #fee2e2; color: #991b1b; padding: 14px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 0.9rem; }
+    .alert-success { background: #dcfce7; color: #166534; padding: 14px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 0.9rem; }
+    .check-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+  <div class="install-card">
+    <div style="text-align:center; margin-bottom:24px;">
+      <div class="brand-emblem" style="margin: 0 auto 12px; width:56px; height:56px; font-size:1.6rem;">SB</div>
+      <h2 style="font-weight:800; color:#0f172a; font-size:1.6rem;">Web Installer SI-BANSOS</h2>
+      <p style="color:#64748b; font-size:0.9rem;">Pemasangan Otomatis Website Kabupaten Bireuen</p>
+    </div>
+
+    <!-- Step Progress -->
+    <div class="step-indicator">
+      <div class="step-item <?php echo $step === 1 ? 'active' : ''; ?>">1. Cek Persyaratan</div>
+      <div class="step-item <?php echo $step === 2 ? 'active' : ''; ?>">2. Setup Database</div>
+      <div class="step-item <?php echo $step === 3 ? 'active' : ''; ?>">3. Selesai</div>
+    </div>
+
+    <?php if ($error): ?>
+      <div class="alert-danger">⚠️ <?php echo htmlspecialchars($error); ?></div>
+    <?php endif; ?>
+
+    <!-- STEP 1: PRASYARAT SERVER -->
+    <?php if ($step === 1): ?>
+      <h3 style="font-size:1.15rem; font-weight:700; margin-bottom:16px;">Pemeriksaan Persyaratan Server</h3>
+      
+      <div class="check-item">
+        <span>Versi PHP (Minimal 7.4)</span>
+        <strong><?php echo PHP_VERSION; ?> (OK)</strong>
+      </div>
+      <div class="check-item">
+        <span>Ekstensi PDO MySQL</span>
+        <strong><?php echo extension_loaded('pdo_mysql') ? '✅ Tersedia' : '❌ Tidak Aktif'; ?></strong>
+      </div>
+      <div class="check-item">
+        <span>Izin Tulis Config File (config.php)</span>
+        <strong><?php echo is_writable($configFile) ? '✅ Writable' : '⚠️ Perlu Izin Tulis'; ?></strong>
+      </div>
+      <div class="check-item">
+        <span>File Skema database.sql</span>
+        <strong><?php echo file_exists($sqlFile) ? '✅ Ditemukan' : '❌ Hilang'; ?></strong>
+      </div>
+
+      <div style="margin-top:30px; text-align:right;">
+        <a href="install.php?step=2" class="btn btn-primary" style="width:100%;">Lanjutkan ke Setup Database ➔</a>
+      </div>
+
+    <!-- STEP 2: FORM SETUP DATABASE -->
+    <?php elseif ($step === 2): ?>
+      <h3 style="font-size:1.15rem; font-weight:700; margin-bottom:12px;">Konfigurasi Database MySQL</h3>
+      <p style="font-size:0.875rem; color:#64748b; margin-bottom:20px;">Masukkan kredensial database MySQL hosting Anda (cPanel/phpMyAdmin).</p>
+
+      <form action="install.php?step=2" method="POST">
+        <div class="form-group">
+          <label class="form-label">Database Host</label>
+          <input type="text" name="db_host" class="form-control" value="localhost" required>
+          <small style="color:#64748b;">Biasanya `localhost` untuk shared hosting cPanel.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nama Database MySQL</label>
+          <input type="text" name="db_name" class="form-control" value="db_sibansos_bireuen" required placeholder="Contoh: user_db_sibansos">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Username Database</label>
+            <input type="text" name="db_user" class="form-control" value="root" required placeholder="root / username_db">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password Database</label>
+            <input type="password" name="db_pass" class="form-control" placeholder="Password MySQL hosting">
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <button type="submit" name="action_install" class="btn btn-primary" style="width:100%;">🚀 Mulai Import & Install Sekarang</button>
+        </div>
+      </form>
+
+    <!-- STEP 3: SELESAI -->
+    <?php elseif ($step === 3): ?>
+      <div style="text-align:center; padding:20px 0;">
+        <div style="font-size:3.5rem; margin-bottom:10px;">🎉</div>
+        <h3 style="font-size:1.5rem; font-weight:800; color:#10b981; margin-bottom:8px;">Instalasi Berhasil!</h3>
+        <p style="color:#475569; font-size:0.95rem; margin-bottom:24px;">Database telah di-import dan file <code>config.php</code> telah diperbarui secara otomatis.</p>
+
+        <div class="alert-success" style="text-align:left;">
+          <strong>🔒 Catatan Keamanan:</strong> Demi keamanan web hosting Anda, sangat disarankan untuk menghapus file <code>install.php</code> dari server setelah instalasi selesai.
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:24px;">
+          <a href="index.php" class="btn btn-outline" style="width:100%;">🌐 Buka Portal Publik</a>
+          <a href="admin.php" class="btn btn-primary" style="width:100%;">🔒 Buka Portal Admin</a>
+        </div>
+      </div>
+    <?php endif; ?>
+
+  </div>
+
+</body>
+</html>
+
+# 🚀 Panduan Upload & Pemasangan Website SI-BANSOS di Web Hosting (cPanel / Shared Hosting / VPS)
+
+Dokumen ini berisi panduan langkah demi langkah cara memasang website **Sistem Informasi Bantuan Sosial (SI-BANSOS) Kabupaten Bireuen** ke dalam web hosting Anda.
+
+---
+
+## 🛠️ Pemasangan Mudah Menggunakan Web Installer (`install.php`)
+
+Website ini telah dilengkapi dengan **Web Installer Wizard** otomatis. Anda **tidak perlu** meng-import file SQL secara manual jika memilih metode ini.
+
+### Langkah-Langkah:
+1. Upload file [si-bansos-bireuen-hosting.zip](file:///c:/Users/User/Downloads/si-bansos-kabupaten-bireuen.4/si-bansos-bireuen-hosting.zip) ke **File Manager** cPanel di folder `public_html`, lalu klik **Extract**.
+2. Buat database & user database MySQL di menu **cPanel -> MySQL Databases**.
+3. Buka browser dan akses alamat website Anda: `https://domain-anda.com/install.php`
+4. Masukkan **Nama Database**, **Username Database**, dan **Password Database**, lalu klik **Install Sekarang**.
+5. Installer akan secara otomatis meng-import tabel, mengisi data awal Bireuen, dan memperbarui `config.php`!
+6. Setelah selesai, hapus file `install.php` demi alasan keamanan.
+
+---
+
+## 📂 Struktur File Project
+```
+si-bansos-kabupaten-bireuen/
+├── .htaccess                 # Konfigurasi keamanan & kompresi Gzip Apache
+├── install.php               # Program Installer Otomatis (Web Installer Wizard)
+├── config.php                # Pengaturan koneksi Database MySQL
+├── database.sql              # Skrip skema database & data awal Kabupaten Bireuen
+├── index.php                 # Halaman Portal Publik & Cek Bansos
+├── admin.php                 # Halaman Dashboard Pengelolaan Admin (DTKS)
+├── api.php                   # Backend REST API
+├── assets/
+│   ├── css/
+│   │   └── style.css         # Stylesheet UI Modern (Glassmorphism & Responsive)
+│   └── js/
+│       └── main.js           # Logika Cek Bansos, AJAX, Charts, & CSV Export
+└── README_HOSTING.md         # Panduan instalasi hosting (file ini)
+```
+
+---
+
+## 🛠️ Metode Manual (Opsional)
+
+Jika Anda lebih memilih metode instalasi manual:
+1. Upload & Extract file project ke `public_html`.
+2. Buka **phpMyAdmin** di cPanel, pilih database Anda, lalu klik **Import** dan pilih file `database.sql`.
+3. Edit file `config.php` dan sesuaikan `DB_NAME`, `DB_USER`, dan `DB_PASS`.
+
+---
+
+## 🌐 Akses Website
+
+- **Portal Publik Warga**: `https://domain-anda.com/`
+- **Portal Admin & Operator**: `https://domain-anda.com/admin.php`
+  - *Login Admin Default*: Username: `admin` | Password: `admin123`
+
+---
+
+*Dikembangkan untuk Pemerintah Kabupaten Bireuen, Provinsi Aceh.*
